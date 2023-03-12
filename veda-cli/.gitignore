@@ -1,0 +1,4 @@
+poetry.lock
+veda_cli/__pycache__
+veda_cli/applications/__pycache__
+veda_cli/datasets/__pycache__
