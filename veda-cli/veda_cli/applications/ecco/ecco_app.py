@@ -8,6 +8,13 @@ import paramiko
 import socket
 import time
 import typer
+from pysondb import db
+from datetime import datetime
+from rich import print
+
+
+def get_db():
+    return db.getDb(os.path.join(os.path.expanduser('~'), ".veda", "db.json"))
 
 def describe_vpcs(tag, tag_values, max_items, ec2_client):
     """
@@ -82,6 +89,27 @@ def describe_subnets(tag, tag_values, max_items, ec2_client):
         return subnets
 
 
+def wait_for_ssh(host, ssh_timeout: float = 60.0):
+    start_time = time.perf_counter()
+    while True:
+        try:
+            with socket.create_connection((host, 22), timeout=ssh_timeout):
+                break
+        except OSError as ex:
+            time.sleep(0.1)
+            if time.perf_counter() - start_time >= ssh_timeout:
+                raise TimeoutError('Connection timed out') from ex
+
+def create_ssh_connection(user, ip, key_file):
+    print("Waiting for SSH to come up")
+    wait_for_ssh(host=ip)
+    print("Port 22 is open. Trying to SSH into the vm")
+    ssh = paramiko.SSHClient()
+    k = paramiko.RSAKey.from_private_key_file(key_file)
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect(hostname=ip, username=user, pkey=k)
+    return ssh
+
 def init_local():
     
     veda_aws_credentials = os.path.join(os.path.expanduser('~'), ".veda", "credentials", "aws")
@@ -99,7 +127,7 @@ def run_ecco_on_ec2(ecco_configs):
 
     access_key = typer.prompt("AWS Access Key Id")
     secret_key = typer.prompt("AWS Secret Access Key")
-    
+
     region = "us-west-2"
     ecco_ami = 'ami-02cf064456f5c84f7'
     instance_size = 'c5.24xlarge'
@@ -248,33 +276,32 @@ def run_ecco_on_ec2(ecco_configs):
     public_ip = ec2_client.describe_instances(InstanceIds=[instance_id])['Reservations'][0]['Instances'][0]['PublicIpAddress']
     print("You can log in to the ECCO running instance using following SSH command")
     local_key_file = os.path.join(os.path.expanduser('~'), ".veda", "credentials", "ssh", key_name)
-    print('ssh -i ' + local_key_file + ' ubuntu@' + public_ip)
-    start_model_run('ubuntu', public_ip, local_key_file)
+    print('[bold red]ssh -i ' + local_key_file + ' ubuntu@' + public_ip + '[/bold red]')
+    ssh = create_ssh_connection('ubuntu', public_ip, local_key_file)
+
+    ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command("cd /home/ubuntu/MITgcm/ECCOV4/release4/run; nohup mpirun -np 96 ./mitgcmuv >> mpi.out 2>&1 &")
+    stdout = ssh_stdout.readlines()
+
+    execution_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=5))
+    db_conn = get_db()
+    db_conn.add({
+        "type": "Execution", 
+        "runtime": "EC2", 
+        "application": "ECCO", 
+        "executionId": execution_id, 
+        "createdTime": datetime.now().strftime("%m/%d/%Y, %H:%M:%S"),
+        "instanceId": instance_id,
+        "publicIp": public_ip,
+        "loginUser": "ubuntu",
+        "accessKey":access_key,
+        "secretKey": secret_key,
+        "region": region,
+        "keyPath": local_key_file})
+
+    print("[bold blue]Started the ECCO Model run. Execution Id: " + execution_id + "[/bold blue]")
 
 def run_ecco_on_jetstream2(ecco_configs):
     print("Running the ECCO simulation on Jetstream 2")
     print("This is not yet supported...")
     
-def wait_for_ssh(host, ssh_timeout: float = 60.0):
-    start_time = time.perf_counter()
-    while True:
-        try:
-            with socket.create_connection((host, 22), timeout=ssh_timeout):
-                break
-        except OSError as ex:
-            time.sleep(0.1)
-            if time.perf_counter() - start_time >= ssh_timeout:
-                raise TimeoutError('Connection timed out') from ex
-
-def start_model_run(user, ip, key_file):
-    print("Starting the model execution. Waiting for SSH to come up")
-    wait_for_ssh(host=ip)
-    print("Port 22 is open. Trying to SSH into the vm")
-    ssh = paramiko.SSHClient()
-    k = paramiko.RSAKey.from_private_key_file(key_file)
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(hostname=ip, username=user, pkey=k)
-    ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command("cd /home/ubuntu/MITgcm/ECCOV4/release4/run; nohup mpirun -np 96 ./mitgcmuv >> mpi.out 2>&1 &")
-    stdout = ssh_stdout.readlines()
-    print("Started the ECCO Model execution")
 

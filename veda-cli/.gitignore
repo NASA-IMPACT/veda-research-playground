@@ -1,4 +1,6 @@
 poetry.lock
 veda_cli/__pycache__
 veda_cli/applications/__pycache__
+veda_cli/applications/ecco/__pycache__
+veda_cli/executions/__pycache__
 veda_cli/datasets/__pycache__
