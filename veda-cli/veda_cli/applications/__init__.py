@@ -2,6 +2,7 @@ import typer
 from rich.table import Table
 from rich.console import Console
 from pick import pick
+import veda_cli.applications.ecco as ecco
 
 app = typer.Typer()
 
@@ -28,5 +29,6 @@ def info(application_name):
 def run():
     options = ["ECCO", "WRF" ]
     option, index = pick(options, "Select the application", indicator="=>")
-    print(f"Running application: ", option)
+    if option == 'ECCO':
+        ecco.run_ecco()
 

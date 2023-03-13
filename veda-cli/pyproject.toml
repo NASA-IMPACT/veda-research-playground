@@ -30,6 +30,8 @@ veda = "veda_cli.main:app"
 python = "^3.10"
 typer = {extras = ["all"], version = "^0.7.0"}
 pick = {version= "2.2.0"}
+boto3 = {version= "^1.26.0"}
+paramiko = {version= "^3.0.0"}
 
 [build-system]
 requires = ["poetry-core"]

@@ -13,7 +13,7 @@ def list():
     table.add_column('Description', justify='left')
     table.add_column('Tags', justify='left')
 
-    table.add_row('ECCO-NASA-V4', 'NASA Hosted ECCO V4 Dataset ', 'OCEAN, CLIMATE')
+    table.add_row('ECCO-NASA-V4', 'NASA Hosted ECCO V4 Dataset', 'OCEAN, CLIMATE')
 
     console.print(table)
 
