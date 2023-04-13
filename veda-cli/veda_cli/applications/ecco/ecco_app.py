@@ -125,8 +125,8 @@ def run_ecco_on_ec2(ecco_configs):
 
     init_local()
 
-    access_key = typer.prompt("AWS Access Key Id")
-    secret_key = typer.prompt("AWS Secret Access Key")
+    access_key = typer.prompt("AWS Access Key Id", hide_input=True)
+    secret_key = typer.prompt("AWS Secret Access Key", hide_input=True)
 
     region = "us-west-2"
     ecco_ami = 'ami-02cf064456f5c84f7'

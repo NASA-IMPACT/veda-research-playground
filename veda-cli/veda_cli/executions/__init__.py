@@ -45,7 +45,7 @@ def kill_execution(executionid):
             if execution['runtime'] == 'EC2':
 
                 continue_termination = typer.confirm("This will terminate the EC2 instance " + execution['instanceId'] 
-                    + ". Do you want to continur?", False)
+                    + ". Do you want to continue?", False)
 
                 if continue_termination:
                     ec2_client = boto3.client(
