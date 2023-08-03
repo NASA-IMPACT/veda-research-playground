@@ -5,15 +5,18 @@ from pysondb import db
 import os
 from rich import print
 import boto3
+import veda_cli.executions.ouput as op
 
 
 app = typer.Typer()
+
+app.add_typer(op.app, name="output")
 
 def get_db():
     return db.getDb(os.path.join(os.path.expanduser('~'), ".veda", "db.json"))
 
 @app.command("list")
-def list():
+def list_executions():
     console = Console()
     table = Table()
 
@@ -31,7 +34,7 @@ def list():
     console.print(table)
 
 @app.command("info")
-def info(executionid: str):
+def execution_info(executionid: str):
     db_conn = get_db()
     executions = db_conn.getBy({"type":"Execution", "executionId": executionid})
     print(executions)

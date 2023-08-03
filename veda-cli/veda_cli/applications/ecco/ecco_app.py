@@ -11,11 +11,43 @@ import typer
 from pysondb import db
 from datetime import datetime
 from rich import print
-
+from airavata_mft_cli import config as configcli
+from airavata_mft_sdk import mft_client
+from airavata_mft_sdk.scp import SCPCredential_pb2
+from airavata_mft_sdk.scp import SCPStorage_pb2
+from airavata_mft_sdk.common import StorageCommon_pb2
 
 def get_db():
     return db.getDb(os.path.join(os.path.expanduser('~'), ".veda", "db.json"))
 
+def register_execution_endpoint(storage_name, private_key, user_name, host_name, port):
+    client = mft_client.MFTClient(transfer_api_port = configcli.transfer_api_port,
+                                    transfer_api_secured = configcli.transfer_api_secured,
+                                    resource_service_host = configcli.resource_service_host,
+                                    resource_service_port = configcli.resource_service_port,
+                                    resource_service_secured = configcli.resource_service_secured,
+                                    secret_service_host = configcli.secret_service_host,
+                                    secret_service_port = configcli.secret_service_port)
+    
+    secret_create_req = SCPCredential_pb2.SCPSecretCreateRequest(privateKey=private_key, 
+                                                                 user=user_name)
+    created_secret = client.scp_secret_api.createSCPSecret(secret_create_req)
+
+    scp_storage_create_req = SCPStorage_pb2.SCPStorageCreateRequest(
+        host=host_name, port=port, name=storage_name)
+    
+    created_storage = client.scp_storage_api.createSCPStorage(scp_storage_create_req)
+
+    secret_for_storage_req = StorageCommon_pb2.SecretForStorage(storageId = created_storage.storageId,
+                                       secretId = created_secret.secretId,
+                                       storageType = StorageCommon_pb2.StorageType.SCP)
+
+    client.common_api.registerSecretForStorage(secret_for_storage_req)
+
+    return created_storage.storageId
+
+
+    
 def describe_vpcs(tag, tag_values, max_items, ec2_client):
     """
     Describes one or more VPCs.
@@ -120,7 +152,7 @@ def init_local():
     if not os.path.exists(veda_ssh_credentials):
         os.makedirs(veda_ssh_credentials)
     
-def run_ecco_on_ec2(ecco_configs):
+def run_ecco_on_ec2(execution_name, ecco_configs):
     print("Running the ECCO simulation on EC2")
 
     init_local()
@@ -129,7 +161,7 @@ def run_ecco_on_ec2(ecco_configs):
     secret_key = typer.prompt("AWS Secret Access Key", hide_input=True)
 
     region = "us-west-2"
-    ecco_ami = 'ami-02cf064456f5c84f7'
+    ecco_ami = 'ami-01b3a8d8f90f3fd3c'
     instance_size = 'c5.24xlarge'
     vpc_name = 'veda_ecco_vpc'
     security_group_name = 'veda_ecco_sg'
@@ -282,6 +314,11 @@ def run_ecco_on_ec2(ecco_configs):
     ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command("cd /home/ubuntu/MITgcm/ECCOV4/release4/run; nohup mpirun -np 96 ./mitgcmuv >> mpi.out 2>&1 &")
     stdout = ssh_stdout.readlines()
 
+    with open(local_key_file, 'r') as key_file:
+        private_key = key_file.read()
+
+    storage_id = register_execution_endpoint(execution_name + " storage",  private_key, "ubuntu", public_ip, 22)
+
     execution_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=5))
     db_conn = get_db()
     db_conn.add({
@@ -296,11 +333,14 @@ def run_ecco_on_ec2(ecco_configs):
         "accessKey":access_key,
         "secretKey": secret_key,
         "region": region,
-        "keyPath": local_key_file})
+        "keyPath": local_key_file,
+        "storageId": storage_id,
+        "outputDir": "/home/ubuntu/MITgcm/ECCOV4/release4/run/diags"})
 
     print("[bold blue]Started the ECCO Model run. Execution Id: " + execution_id + "[/bold blue]")
 
-def run_ecco_on_jetstream2(ecco_configs):
+
+def run_ecco_on_jetstream2(execution_name, ecco_configs):
     print("Running the ECCO simulation on Jetstream 2")
     print("This is not yet supported...")
     

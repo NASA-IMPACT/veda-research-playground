@@ -10,6 +10,8 @@ def run_ecco():
     options = ['ECCO-NASA-V4 : NASA Hosted ECCO V4 Dataset', 'Custom']
     option, index = pick(options, "Which dataset do you want to use?", indicator="=>")
 
+    execution_name = typer.prompt("Execution Name")
+
     customize = typer.confirm("Do want to customize model parameters?", True)
 
     ecco_configs = {}
@@ -20,9 +22,9 @@ def run_ecco():
         ecco_configs['rhonil']=typer.prompt("Rhonil", 1029)
 
     if server_option == 'Amazon EC2':
-        ecco_app.run_ecco_on_ec2(ecco_configs)
+        ecco_app.run_ecco_on_ec2(execution_name, ecco_configs)
     elif server_option == 'Jetstream 2':
-        ecco_app.run_ecco_on_jetstream2(ecco_configs)
+        ecco_app.run_ecco_on_jetstream2(execution_name, ecco_configs)
     else:
         print("Error: Unknow server selection")
 

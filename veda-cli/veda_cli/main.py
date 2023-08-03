@@ -20,12 +20,13 @@ import typer
 import veda_cli.applications
 import veda_cli.datasets
 import veda_cli.executions
+import airavata_mft_cli.storage
 
 app = typer.Typer()
 app.add_typer(veda_cli.applications.app, name="application")
 app.add_typer(veda_cli.datasets.app, name="dataset")
 app.add_typer(veda_cli.executions.app, name="execution")
-
+app.add_typer(airavata_mft_cli.storage.app, name="storage")
 
 if __name__ == "__main__":
     app()

@@ -18,7 +18,7 @@
 
 [tool.poetry]
 name = "veda-cli"
-version = "0.0.2"
+version = "0.0.16"
 description = "Command Line Client NASA VEDA Analytics"
 authors = ["Dimuthu Wannipurage <dwannipu@iu.edu>"]
 readme = "README.md"
@@ -33,6 +33,10 @@ pick = {version= "2.2.0"}
 boto3 = {version= "^1.26.0"}
 paramiko = {version= "^3.0.0"}
 pysondb = {version= "^1.6.6"}
+grpcio= [{version="1.46.3", markers = "platform_machine != 'arm64'"},{version="1.47.0rc1", markers = "platform_machine == 'arm64'"}]
+grpcio-tools = [{version="1.46.3", markers = "platform_machine != 'arm64'"},{version="1.47.0rc1", markers = "platform_machine == 'arm64'"}]
+airavata_mft_sdk= {version="0.0.1-alpha27"}
+airavata-mft-cli = {version="0.1.10"}
 
 [build-system]
 requires = ["poetry-core"]
